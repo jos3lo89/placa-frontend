@@ -6,6 +6,13 @@ import axios from "@/api/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -39,11 +46,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { CalendarIcon } from "lucide-react";
 
 interface VehicleSearch {
   id: string;
   id_placa: string;
   fecha_busqueda: string;
+  tipo: string;
   placa: {
     id: string;
     N_Placa: string;
@@ -104,12 +113,22 @@ const HomePage = () => {
 
   const placa = watch("placa");
 
+  // useEffect(() => {
+  //   if (placa && placa.length === 5) {
+  //     handleSubmit(onSubmit)({ placa: placa }); // Pasa placa de la forma correcta
+  //   }
+  // }, [placa]);
+
   const onSubmit = async (data: SearchFormValues) => {
     try {
-      const res = await axios.get(`/placa/${data.placa}`);
+      const res = await axios.get(`/placa-entrada/${data.placa}`);
       console.log(res.data);
       setVehicleData(res.data);
       setIsModalOpen(true);
+
+      if (date) {
+        fetchVehicleSearches(date);
+      }
     } catch (error) {
       console.error("Error fetching vehicle data:", error);
     }
@@ -118,7 +137,9 @@ const HomePage = () => {
   const fetchVehicleSearches = async (selectedDate: Date) => {
     try {
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      const res = await axios.get(`/placa/search-history/${formattedDate}`);
+      const res = await axios.get(`/search-history/entrada/${formattedDate}`);
+      console.log("--------------", res.data);
+
       setVehicleSearches(res.data);
     } catch (error) {
       console.error("Error al obtener el historial de búsqueda:", error);
@@ -236,13 +257,18 @@ const HomePage = () => {
                     <Label htmlFor="propietario" className="text-right">
                       Propietario
                     </Label>
-                    <Input
-                      disabled={true}
-                      id="propietario"
-                      value={`${vehicleData.Propietarios[0]?.nombre} ${vehicleData.Propietarios[0]?.apellido}`}
-                      className="col-span-3"
-                      readOnly
-                    />
+
+                    {vehicleData.Propietarios &&
+                      vehicleData.Propietarios.map((v, i) => (
+                        <Input
+                          key={i}
+                          disabled={true}
+                          id={`${v.nombre}-${i}`}
+                          className="col-span-3"
+                          value={`${v.nombre} ${v.apellido}`}
+                          readOnly
+                        ></Input>
+                      ))}
                   </div>
                 </div>
               )}
@@ -256,12 +282,16 @@ const HomePage = () => {
 
       <div className="container mx-auto p-4">
         <div className="flex flex-col gap-4 justify-between items-center mb-6 space-y-4 md:space-y-0">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="rounded-md border"
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="relative inline-flex items-center justify-center p-2 text-sm font-medium text-gray-900 rounded-md bg-white border border-gray-300 hover:bg-gray-50">
+                <CalendarIcon className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="">
+              <Calendar mode="single" selected={date} onSelect={setDate} />
+            </PopoverContent>
+          </Popover>
           <Input
             type="text"
             placeholder="Buscar por número de placa"
@@ -279,6 +309,7 @@ const HomePage = () => {
               <TableHead>Modelo</TableHead>
               <TableHead>Color</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Fecha de Búsqueda</TableHead>
             </TableRow>
           </TableHeader>
@@ -290,6 +321,7 @@ const HomePage = () => {
                 <TableCell>{search.placa.Modelo}</TableCell>
                 <TableCell>{search.placa.Color}</TableCell>
                 <TableCell>{search.placa.Estado}</TableCell>
+                <TableCell>{search.tipo.toUpperCase()}</TableCell>
                 <TableCell>
                   {format(
                     new Date(search.fecha_busqueda),
